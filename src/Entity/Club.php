@@ -6,6 +6,8 @@ namespace App\Entity;
 
 use App\Repository\ClubRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ClubRepository::class)]
 class Club
@@ -13,21 +15,32 @@ class Club
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['club:read', 'offer:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 150)]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 2, max: 150)]
+    #[Groups(['club:read', 'club:write', 'offer:read'])]
     private ?string $name = null;
 
     #[ORM\Column(type: 'text', nullable: true)]
+    #[Assert\Length(max: 5000)]
+    #[Groups(['club:read', 'club:write'])]
     private ?string $description = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Url]
+    #[Groups(['club:read', 'club:write'])]
     private ?string $logoUrl = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Url]
+    #[Groups(['club:read', 'club:write'])]
     private ?string $website = null;
 
     #[ORM\Column]
+    #[Groups(['club:read'])]
     private bool $isVerified = false;
 
     #[ORM\OneToOne]
