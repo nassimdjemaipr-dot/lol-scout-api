@@ -7,6 +7,8 @@ namespace App\Entity;
 use App\Enum\PlayerRole;
 use App\Repository\PlayerRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: PlayerRepository::class)]
 class Player
@@ -14,24 +16,39 @@ class Player
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['player:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 100)]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 2, max: 100)]
+    #[Groups(['player:read', 'player:write'])]
     private ?string $pseudo = null;
 
     #[ORM\Column(length: 100)]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 1, max: 100)]
+    #[Groups(['player:read', 'player:write'])]
     private ?string $firstName = null;
 
     #[ORM\Column(length: 100)]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 1, max: 100)]
+    #[Groups(['player:read', 'player:write'])]
     private ?string $lastName = null;
 
     #[ORM\Column(enumType: PlayerRole::class)]
+    #[Assert\NotNull]
+    #[Groups(['player:read', 'player:write'])]
     private ?PlayerRole $gameRole = null;
 
     #[ORM\Column]
+    #[Groups(['player:read', 'player:write'])]
     private bool $isAvailable = true;
 
     #[ORM\Column(type: 'text', nullable: true)]
+    #[Assert\Length(max: 2000)]
+    #[Groups(['player:read', 'player:write'])]
     private ?string $bio = null;
 
     #[ORM\OneToOne]
