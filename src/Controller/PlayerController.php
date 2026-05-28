@@ -8,6 +8,7 @@ use App\Entity\Player;
 use App\Entity\User;
 use App\Enum\PlayerRole;
 use App\Repository\PlayerRepository;
+use App\Service\RiotSyncService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,6 +25,7 @@ class PlayerController extends AbstractController
         private readonly PlayerRepository $playerRepository,
         private readonly SerializerInterface $serializer,
         private readonly ValidatorInterface $validator,
+        private readonly RiotSyncService $riotSyncService,
     ) {
     }
 
@@ -94,6 +96,85 @@ class PlayerController extends AbstractController
             ['groups' => ['player:read']]
         );
     }
+
+    /**
+     * POST /api/players/me/riot-account
+     * Lie un compte Riot au profil du joueur connecté.
+     * Body : { "summonerName": "Pseudo#TAG", "region": "EUW1" }
+     */
+    #[Route('/me/riot-account', name: 'api_player_link_riot', methods: ['POST'])]
+    public function linkRiotAccount(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $player = $this->playerRepository->findOneBy(['user' => $user]);
+
+        if ($player === null) {
+            return $this->json(['error' => 'No player profile for this user'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data) || empty($data['summonerName']) || empty($data['region'])) {
+            return $this->json(['error' => 'summonerName and region are required'], 400);
+        }
+
+        try {
+            $riotAccount = $this->riotSyncService->linkRiotAccount(
+                $player,
+                (string) $data['summonerName'],
+                (string) $data['region']
+            );
+        } catch (\InvalidArgumentException $e) {
+            return $this->json(['error' => $e->getMessage()], 400);
+        } catch (\RuntimeException $e) {
+            return $this->json(['error' => $e->getMessage()], 502);
+        }
+
+        return $this->json([
+            'id' => $riotAccount->getId(),
+            'summonerName' => $riotAccount->getSummonerName(),
+            'puuid' => $riotAccount->getPuuid(),
+            'region' => $riotAccount->getRegion(),
+        ], 201);
+    }
+
+
+    /**
+     * POST /api/players/me/sync-riot
+     * Synchronise les stats Riot du joueur connecté.
+     */
+    #[Route('/me/sync-riot', name: 'api_player_sync_riot', methods: ['POST'])]
+    public function syncRiotStats(): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $player = $this->playerRepository->findOneBy(['user' => $user]);
+
+        if ($player === null) {
+            return $this->json(['error' => 'No player profile for this user'], 404);
+        }
+
+        $riotAccount = $this->em->getRepository(\App\Entity\RiotAccount::class)
+            ->findOneBy(['player' => $player]);
+
+        if ($riotAccount === null) {
+            return $this->json(['error' => 'No Riot account linked. Use POST /api/players/me/riot-account first.'], 404);
+        }
+
+        try {
+            $stats = $this->riotSyncService->syncStats($riotAccount);
+        } catch (\RuntimeException $e) {
+            return $this->json(['error' => $e->getMessage()], 502);
+        }
+
+        return $this->json([
+            'tier' => $stats->getTier(),
+            'winrate' => $stats->getWinrate(),
+            'rankedGamesCount' => $stats->getRankedGamesCount(),
+            'lastSyncAt' => $riotAccount->getLastSyncAt()?->format(\DateTimeInterface::ATOM),
+        ]);
+    }
+
 
     #[Route('/{id}', name: 'api_player_get', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function get(Player $player): JsonResponse

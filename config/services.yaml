@@ -20,5 +20,10 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
+    # Injection de la clé Riot API depuis .env dans le RiotSyncService
+    App\Service\RiotSyncService:
+        arguments:
+            $riotApiKey: '%env(RIOT_API_KEY)%'
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
