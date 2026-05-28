@@ -28,8 +28,21 @@ security:
             jwt: ~
 
     access_control:
+        # Authentification
         - { path: ^/api/login_check, roles: PUBLIC_ACCESS }
         - { path: ^/api/register, roles: PUBLIC_ACCESS }
+
+        # Routes "me" → auth requise (placées AVANT les règles publiques
+        # car ^/api/players/me est un préfixe de ^/api/players)
+        - { path: ^/api/players/me, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/clubs/me, roles: IS_AUTHENTICATED_FULLY }
+
+        # Listings publics en lecture seule (consultation sans connexion, cf. sitemap Jalon 2)
+        - { path: ^/api/players, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/offers, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/clubs, roles: PUBLIC_ACCESS, methods: [GET] }
+
+        # Tout le reste (POST/PATCH/DELETE, candidatures, sync Riot…) → auth requise
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:
