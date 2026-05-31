@@ -163,11 +163,15 @@ class RiotSyncService
             $this->em->remove($old);
         }
 
+        $championNames = $this->getChampionNames();
         foreach ($topChampions as $champ) {
+            $championId = (int) ($champ['championId'] ?? 0);
+            $name = $championNames[$championId] ?? sprintf('Champion #%d', $championId);
+
             $playedChampion = new PlayedChampion();
             $playedChampion
                 ->setPlayerStats($stats)
-                ->setChampionName('Champion #'.$champ['championId'])
+                ->setChampionName($name)
                 ->setGamesPlayed($champ['championPoints'] ?? 0)
                 ->setWinrate('0.00')
                 ->setKda('0.00');
@@ -259,6 +263,56 @@ class RiotSyncService
 
         $response = $this->callRiot($url);
         return $response->toArray();
+    }
+
+
+    /**
+     * Récupère le mapping [championId => name] depuis Data Dragon (CDN public Riot).
+     * Cache 24h car la liste change rarement (~5-10 nouveaux champs / an).
+     *
+     * @return array<int, string>
+     */
+    private function getChampionNames(): array
+    {
+        return $this->cache->get('riot.champions.id-to-name', function (ItemInterface $item): array {
+            $item->expiresAfter(86400); // 24h
+
+            try {
+                // 1. Dernière version de Data Dragon
+                $versionsResponse = $this->httpClient->request(
+                    'GET',
+                    'https://ddragon.leagueoflegends.com/api/versions.json',
+                    ['timeout' => 5]
+                );
+                $versions = $versionsResponse->toArray();
+                $latest = $versions[0] ?? '15.10.1';
+
+                // 2. Liste complète des champions pour cette version
+                $championsResponse = $this->httpClient->request(
+                    'GET',
+                    sprintf('https://ddragon.leagueoflegends.com/cdn/%s/data/en_US/champion.json', $latest),
+                    ['timeout' => 5]
+                );
+                $data = $championsResponse->toArray();
+
+                // 3. Construction de la map [id => name]
+                $map = [];
+                foreach ($data['data'] ?? [] as $champ) {
+                    $id = (int) ($champ['key'] ?? 0);
+                    $name = $champ['name'] ?? null;
+                    if ($id > 0 && $name !== null) {
+                        $map[$id] = $name;
+                    }
+                }
+
+                return $map;
+            } catch (\Throwable $e) {
+                // En cas de pépin avec Data Dragon, on log et on retourne un map vide
+                // (les noms tomberont en "Champion #X" — pas bloquant).
+                $this->logger->warning('Data Dragon fetch failed', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
     }
 
 
