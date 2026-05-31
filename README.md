@@ -57,6 +57,14 @@ curl http://localhost:8000/api/players
 # → liste les 6 joueurs de démo
 ```
 
+### 📖 Documentation API interactive (Swagger)
+
+Une fois l'API démarrée, ouvre **http://localhost:8000/api/doc** dans ton navigateur pour accéder à la documentation **Swagger UI** interactive :
+
+- 18 endpoints documentés (auto-générés via `nelmio/api-doc-bundle`)
+- Authentification Bearer JWT testable directement depuis l'UI (bouton **Authorize**)
+- Spec OpenAPI 3.0 brute exposée sur **`/api/doc.json`**
+
 ---
 
 ## 👤 Comptes de démonstration
@@ -214,9 +222,18 @@ Le détail est dans [`docs/TESTS.md`](docs/TESTS.md). En bref :
 
 ## 📋 Statut du projet (Jalon 5 — fin mai 2026)
 
-✅ **Fait** : auth JWT, profils joueurs/clubs, offres, candidatures, sync Riot (code), fixtures, Docker, sécurité de base.
+✅ **Livré Jalon 5 (v1.0-beta)** :
+- Authentification JWT + register/login
+- CRUD complet : joueurs, clubs, offres, candidatures
+- Intégration **API Riot Games live** (lien compte + sync stats + mapping noms de champions via Data Dragon)
+- Sérialisation imbriquée (player → riotAccount → stats → playedChampions)
+- Documentation Swagger interactive sur `/api/doc`
+- Sécurité : access_control par méthode, ownership, hashing bcrypt, JWT RS256
+- Docker Compose (PHP 8.2 + Nginx + MySQL 8) prêt à l'emploi
+- CI GitHub Actions (install + lint container) verte
+- 5 jeux de données de démo via fixtures
 
-⏳ **Prévu Jalon 6 (juin)** : tests PHPUnit, voters Symfony, sérialisation imbriquée stats, déploiement production.
+⏳ **Prévu Jalon 6 (juin)** : tests PHPUnit, voters Symfony, déploiement production.
 
 Bilan détaillé dans [`docs/BILAN.md`](docs/BILAN.md).
 
