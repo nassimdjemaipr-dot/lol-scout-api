@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\PlayerStatsRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: PlayerStatsRepository::class)]
 class PlayerStats
@@ -13,29 +16,51 @@ class PlayerStats
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['player:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['player:read'])]
     private ?string $tier = null;
 
     #[ORM\Column(type: 'decimal', precision: 5, scale: 2)]
+    #[Groups(['player:read'])]
     private ?string $winrate = null;
 
     #[ORM\Column(type: 'decimal', precision: 4, scale: 2)]
+    #[Groups(['player:read'])]
     private ?string $averageKda = null;
 
     #[ORM\Column(type: 'decimal', precision: 4, scale: 2)]
+    #[Groups(['player:read'])]
     private ?string $csPerMinute = null;
 
     #[ORM\Column(type: 'decimal', precision: 5, scale: 2)]
+    #[Groups(['player:read'])]
     private ?string $visionScore = null;
 
     #[ORM\Column]
+    #[Groups(['player:read'])]
     private ?int $rankedGamesCount = null;
 
-    #[ORM\OneToOne]
+    #[ORM\OneToOne(inversedBy: 'stats', targetEntity: RiotAccount::class)]
     #[ORM\JoinColumn(nullable: false, unique: true)]
     private ?RiotAccount $riotAccount = null;
+
+    /**
+     * Top champions joués par le compte Riot.
+     * Relation inverse de PlayedChampion::$playerStats.
+     *
+     * @var Collection<int, PlayedChampion>
+     */
+    #[ORM\OneToMany(mappedBy: 'playerStats', targetEntity: PlayedChampion::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['player:read'])]
+    private Collection $playedChampions;
+
+    public function __construct()
+    {
+        $this->playedChampions = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -122,6 +147,31 @@ class PlayerStats
     public function setRiotAccount(RiotAccount $riotAccount): static
     {
         $this->riotAccount = $riotAccount;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, PlayedChampion>
+     */
+    public function getPlayedChampions(): Collection
+    {
+        return $this->playedChampions;
+    }
+
+    public function addPlayedChampion(PlayedChampion $champion): static
+    {
+        if (!$this->playedChampions->contains($champion)) {
+            $this->playedChampions->add($champion);
+            $champion->setPlayerStats($this);
+        }
+
+        return $this;
+    }
+
+    public function removePlayedChampion(PlayedChampion $champion): static
+    {
+        $this->playedChampions->removeElement($champion);
 
         return $this;
     }

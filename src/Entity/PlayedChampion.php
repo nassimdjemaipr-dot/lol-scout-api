@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Repository\PlayedChampionRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: PlayedChampionRepository::class)]
 class PlayedChampion
@@ -13,21 +14,26 @@ class PlayedChampion
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['player:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['player:read'])]
     private ?string $championName = null;
 
     #[ORM\Column]
+    #[Groups(['player:read'])]
     private ?int $gamesPlayed = null;
 
     #[ORM\Column(type: 'decimal', precision: 5, scale: 2)]
+    #[Groups(['player:read'])]
     private ?string $winrate = null;
 
     #[ORM\Column(type: 'decimal', precision: 4, scale: 2)]
+    #[Groups(['player:read'])]
     private ?string $kda = null;
 
-    #[ORM\ManyToOne]
+    #[ORM\ManyToOne(inversedBy: 'playedChampions', targetEntity: PlayerStats::class)]
     #[ORM\JoinColumn(nullable: false)]
     private ?PlayerStats $playerStats = null;
 
