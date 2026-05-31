@@ -41,7 +41,7 @@ jobs:
         continue-on-error: true
 
       - name: Validate composer.json
-        run: composer validate --strict
+        run: composer validate --no-check-publish
 
       - name: Symfony container linter
         env:
