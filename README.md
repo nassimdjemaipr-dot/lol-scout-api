@@ -173,8 +173,6 @@ Architecture **MVC distribué** :
 - **Contrôleur** = controllers Symfony (REST, JSON-only)
 - **Vue** = application React indépendante ([lol-scout-front](https://github.com/nassimdjemaipr-dot/lol-scout-front))
 
-Documentation détaillée (UML, architecture, choix techniques) dans [`docs/JALON4_Conception_Technique.md`](docs/JALON4_Conception_Technique.md).
-
 ---
 
 ## 🔌 Intégration API Riot Games
@@ -247,10 +245,11 @@ Bilan détaillé dans [`docs/BILAN.md`](docs/BILAN.md).
 
 ## 📂 Documentation projet
 
-- [`docs/JALON4_Conception_Technique.md`](docs/JALON4_Conception_Technique.md) — UML, architecture, design patterns
 - [`docs/SECURITY.md`](docs/SECURITY.md) — analyse de sécurité (Jalon 5)
 - [`docs/TESTS.md`](docs/TESTS.md) — politique de tests (Jalon 5)
 - [`docs/BILAN.md`](docs/BILAN.md) — bilan d'avancement (Jalon 5)
+
+> Les dossiers de conception (Jalon 1 — CDCF, Jalon 2 — UI/UX, Jalon 3 — MERISE, Jalon 4 — UML & architecture) sont livrés séparément avec chaque jalon mensuel.
 
 Frontend du projet : **https://github.com/nassimdjemaipr-dot/lol-scout-front**
 
