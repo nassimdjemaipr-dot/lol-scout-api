@@ -55,6 +55,14 @@ class Player
     #[ORM\JoinColumn(nullable: false, unique: true)]
     private ?User $user = null;
 
+    /**
+     * Relation inverse vers RiotAccount.
+     * Un joueur n'a au maximum qu'un seul compte Riot lié.
+     */
+    #[ORM\OneToOne(mappedBy: 'player', targetEntity: RiotAccount::class)]
+    #[Groups(['player:read'])]
+    private ?RiotAccount $riotAccount = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -140,6 +148,18 @@ class Player
     public function setUser(User $user): static
     {
         $this->user = $user;
+
+        return $this;
+    }
+
+    public function getRiotAccount(): ?RiotAccount
+    {
+        return $this->riotAccount;
+    }
+
+    public function setRiotAccount(?RiotAccount $riotAccount): static
+    {
+        $this->riotAccount = $riotAccount;
 
         return $this;
     }
