@@ -32,6 +32,9 @@ security:
         - { path: ^/api/login_check, roles: PUBLIC_ACCESS }
         - { path: ^/api/register, roles: PUBLIC_ACCESS }
 
+        # Documentation OpenAPI / Swagger UI (lecture publique)
+        - { path: ^/api/doc, roles: PUBLIC_ACCESS }
+
         # Routes "me" → auth requise (placées AVANT les règles publiques
         # car ^/api/players/me est un préfixe de ^/api/players)
         - { path: ^/api/players/me, roles: IS_AUTHENTICATED_FULLY }
