@@ -87,16 +87,25 @@ class RiotSyncService
         // Étape 1 : résoudre le PUUID via le regional router
         $puuid = $this->resolvePuuid($gameName, $tagLine, $region);
 
-        // Étape 2 : créer ou retrouver le RiotAccount
+        // Étape 2 : récupérer le RiotAccount existant du joueur (un joueur = 1 seul compte Riot)
+        // Si le joueur a déjà un compte (ex. créé par les fixtures), on le METTRE À JOUR
+        // au lieu d'en créer un nouveau, pour garder les PlayerStats / PlayedChampion liés.
         $riotAccount = $this->em->getRepository(RiotAccount::class)
+            ->findOneBy(['player' => $player]);
+
+        // Sécurité : vérifier que ce PUUID n'est pas déjà lié à un AUTRE joueur
+        $conflicting = $this->em->getRepository(RiotAccount::class)
             ->findOneBy(['puuid' => $puuid]);
+        if ($conflicting !== null && $conflicting !== $riotAccount) {
+            throw new \RuntimeException('Ce compte Riot est déjà lié à un autre joueur LoL Scout.');
+        }
 
         if ($riotAccount === null) {
             $riotAccount = new RiotAccount();
-            $riotAccount->setPuuid($puuid);
         }
 
         $riotAccount
+            ->setPuuid($puuid)
             ->setPlayer($player)
             ->setSummonerName($gameName.'#'.$tagLine)
             ->setRegion($region);
