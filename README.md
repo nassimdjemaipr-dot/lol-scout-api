@@ -1,5 +1,11 @@
 # LoL Scout — Backend API
 
+[![CI Backend](https://github.com/nassimdjemaipr-dot/lol-scout-api/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nassimdjemaipr-dot/lol-scout-api/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/nassimdjemaipr-dot/lol-scout-api?include_prereleases&label=release)](https://github.com/nassimdjemaipr-dot/lol-scout-api/releases)
+![PHP](https://img.shields.io/badge/PHP-8.2-777BB4?logo=php&logoColor=white)
+![Symfony](https://img.shields.io/badge/Symfony-7.2-000000?logo=symfony&logoColor=white)
+![License](https://img.shields.io/badge/license-Educational-blue)
+
 > Plateforme de recrutement esport pour joueurs et clubs **League of Legends**.
 > Backend REST en **Symfony 7.2**, base de données **MySQL 8**, intégration **API Riot Games**.
 
