@@ -7,3 +7,14 @@ controllers:
 api_login_check:
     path: /api/login_check
     methods: [POST]
+
+# Nelmio API Doc : interface Swagger UI + JSON brut
+app.swagger_ui:
+    path: /api/doc
+    methods: GET
+    defaults: { _controller: nelmio_api_doc.controller.swagger_ui }
+
+app.swagger:
+    path: /api/doc.json
+    methods: GET
+    defaults: { _controller: nelmio_api_doc.controller.swagger }

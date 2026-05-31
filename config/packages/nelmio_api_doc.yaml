@@ -1,0 +1,75 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: LoL Scout API
+            description: |
+                API REST de la plateforme **LoL Scout** — recrutement esport League of Legends.
+
+                ## Authentification
+                La plupart des endpoints necessitent un **JWT Bearer token**.
+
+                1. POST `/api/login_check` avec `{ "username": "...", "password": "..." }`
+                2. Copier le token retourne
+                3. Cliquer sur "Authorize" en haut a droite, format : `Bearer <token>`
+
+                ## Comptes de test
+                - Joueur : `joueur1@test.com` / `password123`
+                - Club : `club1@test.com` / `password123`
+            version: 1.0.0-beta
+        components:
+            securitySchemes:
+                Bearer:
+                    type: http
+                    scheme: bearer
+                    bearerFormat: JWT
+        security:
+            - Bearer: []
+        tags:
+            - name: Auth
+              description: Authentification JWT (login / register)
+            - name: Players
+              description: Gestion des joueurs et de leurs profils
+            - name: Riot
+              description: Integration API Riot Games (lien compte, sync stats)
+            - name: Offers
+              description: Offres de recrutement publiees par les clubs
+            - name: Applications
+              description: Candidatures des joueurs aux offres
+            - name: Clubs
+              description: Gestion des clubs / equipes
+        paths:
+            /api/login_check:
+                post:
+                    tags: [Auth]
+                    summary: Authentification - recupere un JWT
+                    security: []
+                    requestBody:
+                        required: true
+                        content:
+                            application/json:
+                                schema:
+                                    type: object
+                                    required: [username, password]
+                                    properties:
+                                        username:
+                                            type: string
+                                            example: joueur1@test.com
+                                        password:
+                                            type: string
+                                            example: password123
+                    responses:
+                        '200':
+                            description: Token JWT genere
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            token:
+                                                type: string
+                                                example: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+                        '401':
+                            description: Identifiants invalides
+    areas:
+        path_patterns:
+            - ^/api(?!/doc$)
