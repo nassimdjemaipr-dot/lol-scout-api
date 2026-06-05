@@ -30,27 +30,29 @@ class PlayerController extends AbstractController
     }
 
     #[Route('', name: 'api_player_list', methods: ['GET'])]
-    public function list(): JsonResponse
+    public function list(Request $request): JsonResponse
     {
-        $players = $this->playerRepository->findAll();
-
-        return $this->json(
-            $players,
-            200,
-            [],
-            ['groups' => ['player:read']]
-        );
+        return $this->doSearch($request);
     }
 
     #[Route('/search', name: 'api_player_search', methods: ['GET'])]
     public function search(Request $request): JsonResponse
+    {
+        // Alias de list() pour retrocompatibilite.
+        return $this->doSearch($request);
+    }
+
+    /**
+     * Recherche/listing des joueurs avec filtres optionnels (role + isAvailable).
+     */
+    private function doSearch(Request $request): JsonResponse
     {
         $role = $request->query->get('role');
         $availableParam = $request->query->get('available');
 
         $criteria = [];
 
-        if ($role !== null) {
+        if ($role !== null && $role !== '') {
             $roleEnum = PlayerRole::tryFrom($role);
             if ($roleEnum === null) {
                 return $this->json(
@@ -64,11 +66,13 @@ class PlayerController extends AbstractController
             $criteria['gameRole'] = $roleEnum;
         }
 
-        if ($availableParam !== null) {
+        if ($availableParam !== null && $availableParam !== '') {
             $criteria['isAvailable'] = filter_var($availableParam, FILTER_VALIDATE_BOOLEAN);
         }
 
-        $players = $this->playerRepository->findBy($criteria);
+        $players = $criteria === []
+            ? $this->playerRepository->findAll()
+            : $this->playerRepository->findBy($criteria);
 
         return $this->json(
             $players,
