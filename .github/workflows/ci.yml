@@ -1,5 +1,5 @@
 # CI back — lance à chaque push / PR sur main
-# Vérifie : install composer, lint PHP, syntaxe des fichiers, container Symfony
+# Vérifie : install composer, lint PHP, syntaxe des fichiers, container Symfony, PHPUnit
 
 name: CI Backend
 
@@ -11,8 +11,24 @@ on:
 
 jobs:
   build:
-    name: Install + Lint + Container
+    name: Install + Lint + Tests
     runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpass
+          MYSQL_DATABASE: lolscout
+          MYSQL_USER: app
+          MYSQL_PASSWORD: '!ChangeMe!'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -prootpass"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
       - name: Checkout
@@ -22,8 +38,8 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: ctype, iconv, intl, pdo_mysql
-          coverage: none
+          extensions: ctype, iconv, intl, pdo_mysql, pcov
+          coverage: pcov
           tools: composer:v2
 
       - name: Cache Composer dependencies
@@ -43,20 +59,63 @@ jobs:
       - name: Validate composer.json
         run: composer validate --no-check-publish
 
+      - name: Generate JWT keys for CI
+        env:
+          JWT_PASSPHRASE: ci-passphrase
+        run: |
+          mkdir -p config/jwt
+          openssl genpkey -algorithm RSA -out config/jwt/private.pem -aes256 -pass pass:ci-passphrase
+          openssl pkey -in config/jwt/private.pem -passin pass:ci-passphrase -out config/jwt/public.pem -pubout
+
       - name: Symfony container linter
         env:
           APP_ENV: test
           APP_SECRET: ci-secret-for-validation-only
-          DATABASE_URL: 'mysql://root:root@127.0.0.1:3306/test'
+          DATABASE_URL: 'mysql://root:rootpass@127.0.0.1:3306/lolscout?serverVersion=8.0&charset=utf8mb4'
           JWT_PASSPHRASE: ci-passphrase
           JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
           JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
           RIOT_API_KEY: ci-fake-key
         run: |
-          mkdir -p config/jwt
-          openssl genpkey -algorithm RSA -out config/jwt/private.pem -aes256 -pass pass:ci-passphrase
-          openssl pkey -in config/jwt/private.pem -passin pass:ci-passphrase -out config/jwt/public.pem -pubout
           php bin/console lint:container --env=test
           php bin/console lint:yaml config/ --env=test
 
-      # TODO Jalon 6 : ajouter `vendor/bin/phpunit` quand les tests seront écrits
+      - name: Wait for MySQL
+        run: |
+          for i in {30..0}; do
+            if mysqladmin ping -h 127.0.0.1 -u root -prootpass --silent; then
+              echo "MySQL is up"; break
+            fi
+            sleep 1
+          done
+
+      - name: Create test database + run migrations
+        env:
+          APP_ENV: test
+          APP_SECRET: ci-secret-for-validation-only
+          DATABASE_URL: 'mysql://root:rootpass@127.0.0.1:3306/lolscout?serverVersion=8.0&charset=utf8mb4'
+          JWT_PASSPHRASE: ci-passphrase
+          JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
+          JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
+          RIOT_API_KEY: ci-fake-key
+        run: |
+          php bin/console doctrine:database:create --env=test --if-not-exists
+          php bin/console doctrine:migrations:migrate --env=test --no-interaction
+
+      - name: Run PHPUnit with coverage
+        env:
+          APP_ENV: test
+          APP_SECRET: ci-secret-for-validation-only
+          DATABASE_URL: 'mysql://root:rootpass@127.0.0.1:3306/lolscout?serverVersion=8.0&charset=utf8mb4'
+          JWT_PASSPHRASE: ci-passphrase
+          JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
+          JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
+          RIOT_API_KEY: ci-fake-key
+        run: php bin/phpunit --coverage-text --coverage-clover=coverage.xml
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          if [ -f coverage.xml ]; then
+            echo "Coverage report generated: coverage.xml"
+          fi
