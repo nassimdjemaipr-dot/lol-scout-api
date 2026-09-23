@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Entity\Player;
 use App\Entity\User;
 use App\Enum\PlayerRole;
+use App\Enum\Tier;
 use App\Repository\PlayerRepository;
 use App\Service\RiotSyncService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -43,15 +44,16 @@ class PlayerController extends AbstractController
     }
 
     /**
-     * Recherche/listing des joueurs avec filtres optionnels (role + isAvailable).
+     * Recherche/listing des joueurs avec filtres optionnels :
+     * role, disponibilite, rang minimum.
      */
     private function doSearch(Request $request): JsonResponse
     {
         $role = $request->query->get('role');
         $availableParam = $request->query->get('available');
+        $minRank = $request->query->get('minRank');
 
-        $criteria = [];
-
+        $roleEnum = null;
         if ($role !== null && $role !== '') {
             $roleEnum = PlayerRole::tryFrom($role);
             if ($roleEnum === null) {
@@ -63,16 +65,28 @@ class PlayerController extends AbstractController
                     400
                 );
             }
-            $criteria['gameRole'] = $roleEnum;
         }
 
+        $isAvailable = null;
         if ($availableParam !== null && $availableParam !== '') {
-            $criteria['isAvailable'] = filter_var($availableParam, FILTER_VALIDATE_BOOLEAN);
+            $isAvailable = filter_var($availableParam, FILTER_VALIDATE_BOOLEAN);
         }
 
-        $players = $criteria === []
-            ? $this->playerRepository->findAll()
-            : $this->playerRepository->findBy($criteria);
+        $minimumTier = null;
+        if ($minRank !== null && $minRank !== '') {
+            $minimumTier = Tier::fromLabel($minRank);
+            if ($minimumTier === null) {
+                return $this->json(
+                    [
+                        'error' => 'Invalid minimum rank',
+                        'allowed' => Tier::values(),
+                    ],
+                    400
+                );
+            }
+        }
+
+        $players = $this->playerRepository->search($roleEnum, $isAvailable, $minimumTier);
 
         return $this->json(
             $players,
