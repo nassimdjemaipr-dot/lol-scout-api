@@ -3,8 +3,18 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
+    # FPM et les commandes lancees via docker compose exec tournent sous le meme
+    # utilisateur : sinon la console, en root, cree des dossiers dans var/ que
+    # php-fpm ne peut plus ecrire.
+    user: "www-data"
     volumes:
       - .:/var/www/html
+      # vendor/ et var/ vivent dans des volumes nommes, donc dans le systeme de
+      # fichiers Linux et non sur le montage Windows. 6 574 fichiers PHP que
+      # opcache re-verifie sinon a chaque revalidation, a travers le pont
+      # Docker Desktop : c est la cause des temps de reponse de 4 a 9 secondes.
+      - vendor_data:/var/www/html/vendor
+      - var_data:/var/www/html/var
     depends_on:
       database:
         condition: service_healthy
@@ -51,3 +61,5 @@ services:
 
 volumes:
   db_data:
+  vendor_data:
+  var_data:
