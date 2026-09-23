@@ -17,3 +17,7 @@
 /phpunit.xml
 /.phpunit.cache/
 ###< phpunit/phpunit ###
+
+###> dossier projet ###
+# Livrables école : transmis via la plateforme de suivi, hors dépôt.
+/docs/dossier-projet/
