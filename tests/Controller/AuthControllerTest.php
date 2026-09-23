@@ -49,6 +49,46 @@ class AuthControllerTest extends ApiTestCase
         $this->assertSame('Invalid role', $data['error']);
     }
 
+    public function testRegisterFailsWithShortPassword(): void
+    {
+        $this->postJson('/api/register', [
+            'email' => $this->uniqueEmail('shortpass'),
+            'password' => 'court',
+            'role' => 'ROLE_PLAYER',
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+
+        $data = $this->getJsonResponse();
+        $fields = array_column($data['errors'], 'field');
+        $this->assertContains('plainPassword', $fields);
+    }
+
+    public function testRegisterFailsWithMalformedEmail(): void
+    {
+        $this->postJson('/api/register', [
+            'email' => 'pas-une-adresse',
+            'password' => 'secretpass123',
+            'role' => 'ROLE_PLAYER',
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+
+        $data = $this->getJsonResponse();
+        $fields = array_column($data['errors'], 'field');
+        $this->assertContains('email', $fields);
+    }
+
+    public function testRegisterFailsWhenFieldIsNotAString(): void
+    {
+        $this->postJson('/api/register', [
+            'email' => ['injection'],
+            'password' => 'secretpass123',
+            'role' => 'ROLE_PLAYER',
+        ]);
+
+        $this->assertResponseStatusCodeSame(400);
+    }
     public function testRegisterFailsIfEmailAlreadyUsed(): void
     {
         $email = $this->uniqueEmail('dup');
@@ -97,7 +137,7 @@ class AuthControllerTest extends ApiTestCase
         $email = $this->uniqueEmail('badpass');
         $this->postJson('/api/register', [
             'email' => $email,
-            'password' => 'correctpass',
+            'password' => 'correctpass-2026',
             'role' => 'ROLE_PLAYER',
         ]);
 

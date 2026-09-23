@@ -16,6 +16,7 @@ security:
         login:
             pattern: ^/api/login_check
             stateless: true
+            user_checker: App\Security\UserChecker
             json_login:
                 check_path: /api/login_check
                 success_handler: lexik_jwt_authentication.handler.authentication_success
@@ -25,6 +26,7 @@ security:
             pattern: ^/api
             stateless: true
             provider: app_user_provider
+            user_checker: App\Security\UserChecker
             jwt: ~
 
     access_control:
