@@ -200,6 +200,48 @@ class PlayerControllerTest extends ApiTestCase
         ];
     }
 
+    // ─── Filtre par rang minimum ────────────────────────────────
+
+    public function testSearchRejectsAnUnknownMinimumRank(): void
+    {
+        $this->client->request('GET', '/api/players?minRank=Legendaire');
+
+        $this->assertResponseStatusCodeSame(400);
+
+        $data = $this->getJsonResponse();
+        $this->assertSame('Invalid minimum rank', $data['error']);
+        $this->assertContains('Diamond', $data['allowed']);
+    }
+
+    public function testMinimumRankExcludesPlayersWithoutARiotAccount(): void
+    {
+        $this->createPlayer('norank', 'NoRankPlayer', 'MID');
+
+        // Sans filtre de rang, le joueur apparait.
+        $this->client->request('GET', '/api/players?role=MID');
+        $this->assertResponseIsSuccessful();
+        $pseudos = array_column($this->getJsonResponse(), 'pseudo');
+        $this->assertContains('NoRankPlayer', $pseudos);
+
+        // Avec un rang minimum, il disparait : aucun compte Riot lie,
+        // donc aucun rang a comparer.
+        $this->client->request('GET', '/api/players?role=MID&minRank=Iron');
+        $this->assertResponseIsSuccessful();
+        $pseudos = array_column($this->getJsonResponse(), 'pseudo');
+        $this->assertNotContains('NoRankPlayer', $pseudos);
+    }
+
+    public function testSearchCombinesRoleAndAvailability(): void
+    {
+        $this->createPlayer('combo', 'ComboPlayer', 'SUPPORT');
+
+        $this->client->request('GET', '/api/players?role=SUPPORT&available=true');
+
+        $this->assertResponseIsSuccessful();
+        $pseudos = array_column($this->getJsonResponse(), 'pseudo');
+        $this->assertContains('ComboPlayer', $pseudos);
+    }
+
     /**
      * Cree un user + son profil joueur, retourne le JWT.
      */
