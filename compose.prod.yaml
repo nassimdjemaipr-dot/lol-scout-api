@@ -1,0 +1,42 @@
+services:
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile.prod
+    volumes: !reset []
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: 0
+      APP_SECRET: ${APP_SECRET:?APP_SECRET est obligatoire en production}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL est obligatoire en production}
+      JWT_PASSPHRASE: ${JWT_PASSPHRASE:?JWT_PASSPHRASE est obligatoire en production}
+      RIOT_API_KEY: ${RIOT_API_KEY:?RIOT_API_KEY est obligatoire en production}
+      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN:?CORS_ALLOW_ORIGIN est obligatoire en production}
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile.prod
+    image: !reset null
+    volumes: !reset []
+    ports: !override
+      - "${HTTP_PORT:-8000}:80"
+    restart: unless-stopped
+
+  front:
+    build:
+      args:
+        VITE_API_URL: ${VITE_API_URL:?VITE_API_URL est obligatoire en production}
+    ports: !override
+      - "${FRONT_PORT:-3000}:80"
+    restart: unless-stopped
+
+  database:
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD est obligatoire en production}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-lolscout}
+      MYSQL_USER: ${MYSQL_USER:?MYSQL_USER est obligatoire en production}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD est obligatoire en production}
+    ports: !reset []
+    restart: unless-stopped

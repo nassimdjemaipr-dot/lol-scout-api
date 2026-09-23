@@ -19,6 +19,19 @@ services:
     depends_on:
       - php
 
+  front:
+    # Le front vit dans un depot separe, clone a cote de celui-ci.
+    # Procedure complete : voir DEPLOYMENT.md.
+    build:
+      context: ../lol-scout-front
+      dockerfile: docker/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api}
+    ports:
+      - "3000:80"
+    depends_on:
+      - nginx
+
   database:
     image: mysql:8.0
     environment:
