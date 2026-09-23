@@ -1,0 +1,45 @@
+FROM php:8.3-fpm AS builder
+
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    libicu-dev \
+    libzip-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN docker-php-ext-install pdo_mysql intl zip opcache
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader
+
+COPY . .
+RUN composer dump-autoload --no-dev --classmap-authoritative \
+    && rm -rf var/cache/* var/log/* tests/ docs/
+
+
+FROM php:8.3-fpm AS runtime
+
+RUN apt-get update && apt-get install -y \
+    libicu-dev \
+    libzip-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN docker-php-ext-install pdo_mysql intl zip opcache
+
+COPY docker/php/php.prod.ini /usr/local/etc/php/conf.d/zz-prod.ini
+COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+WORKDIR /var/www/html
+COPY --from=builder /var/www/html .
+
+RUN chown -R www-data:www-data var
+
+USER www-data
+
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["php-fpm"]
