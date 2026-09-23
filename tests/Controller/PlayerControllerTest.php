@@ -22,8 +22,8 @@ class PlayerControllerTest extends ApiTestCase
     public function testListWithRoleFilterReturnsOnlyMatchingPlayers(): void
     {
         // On cree un joueur ADC + un MID
-        $this->createPlayer('adc-test@test.com', 'ADCPlayer', 'ADC');
-        $this->createPlayer('mid-test@test.com', 'MIDPlayer', 'MID');
+        $this->createPlayer('adc-test', 'ADCPlayer', 'ADC');
+        $this->createPlayer('mid-test', 'MIDPlayer', 'MID');
 
         // Filtre par ADC
         $this->getJson('/api/players?role=ADC');
@@ -60,7 +60,7 @@ class PlayerControllerTest extends ApiTestCase
 
     public function testMeReturns404IfNoPlayerProfileYet(): void
     {
-        $token = $this->registerAndLogin('noprofile@test.com', 'ROLE_PLAYER');
+        $token = $this->registerAndLogin('noprofile', 'ROLE_PLAYER');
 
         $this->getJson('/api/players/me', $token);
         $this->assertResponseStatusCodeSame(404);
@@ -68,7 +68,7 @@ class PlayerControllerTest extends ApiTestCase
 
     public function testMeReturnsTheConnectedPlayer(): void
     {
-        $token = $this->createPlayer('me@test.com', 'MyPseudo', 'TOP');
+        $token = $this->createPlayer('me', 'MyPseudo', 'TOP');
 
         $this->getJson('/api/players/me', $token);
         $this->assertResponseStatusCodeSame(200);
@@ -82,7 +82,7 @@ class PlayerControllerTest extends ApiTestCase
 
     public function testCreatePlayerSuccess(): void
     {
-        $token = $this->registerAndLogin('create@test.com', 'ROLE_PLAYER');
+        $token = $this->registerAndLogin('create', 'ROLE_PLAYER');
 
         $this->postJson('/api/players', $this->validPlayerPayload('NewPseudo', 'JUNGLE'), $token);
 
@@ -93,7 +93,7 @@ class PlayerControllerTest extends ApiTestCase
 
     public function testCreatePlayerFailsIfAlreadyHasProfile(): void
     {
-        $token = $this->createPlayer('dup@test.com', 'FirstPseudo', 'SUPPORT');
+        $token = $this->createPlayer('dup', 'FirstPseudo', 'SUPPORT');
 
         // 2e tentative -> 409
         $this->postJson('/api/players', $this->validPlayerPayload('SecondPseudo', 'MID'), $token);
@@ -112,7 +112,7 @@ class PlayerControllerTest extends ApiTestCase
 
     public function testGetPlayerByIdReturnsPlayer(): void
     {
-        $this->createPlayer('detail@test.com', 'DetailPlayer', 'ADC');
+        $this->createPlayer('detail', 'DetailPlayer', 'ADC');
         $this->getJson('/api/players');
         $players = $this->getJsonResponse();
 
@@ -136,7 +136,7 @@ class PlayerControllerTest extends ApiTestCase
 
     public function testUpdateOwnProfileWorks(): void
     {
-        $token = $this->createPlayer('update@test.com', 'BeforeName', 'MID');
+        $token = $this->createPlayer('update', 'BeforeName', 'MID');
 
         $this->getJson('/api/players/me', $token);
         $playerId = $this->getJsonResponse()['id'];
@@ -152,12 +152,12 @@ class PlayerControllerTest extends ApiTestCase
     public function testUpdateOtherPlayerReturns403(): void
     {
         // joueur A cree un profil
-        $tokenA = $this->createPlayer('a@test.com', 'PlayerA', 'TOP');
+        $tokenA = $this->createPlayer('a', 'PlayerA', 'TOP');
         $this->getJson('/api/players/me', $tokenA);
         $playerAId = $this->getJsonResponse()['id'];
 
         // joueur B essaie de modifier A
-        $tokenB = $this->createPlayer('b@test.com', 'PlayerB', 'JUNGLE');
+        $tokenB = $this->createPlayer('b', 'PlayerB', 'JUNGLE');
 
         $this->patchJson("/api/players/{$playerAId}", [
             'pseudo' => 'Hacked',
@@ -170,7 +170,7 @@ class PlayerControllerTest extends ApiTestCase
 
     public function testLinkRiotAccountWithoutPayloadReturns400(): void
     {
-        $token = $this->createPlayer('riot@test.com', 'RiotPlayer', 'ADC');
+        $token = $this->createPlayer('riot', 'RiotPlayer', 'ADC');
 
         $this->postJson('/api/players/me/riot-account', [], $token);
         $this->assertResponseStatusCodeSame(400);
@@ -178,7 +178,7 @@ class PlayerControllerTest extends ApiTestCase
 
     public function testSyncRiotWithoutLinkedAccountReturns404(): void
     {
-        $token = $this->createPlayer('sync@test.com', 'SyncPlayer', 'SUPPORT');
+        $token = $this->createPlayer('sync', 'SyncPlayer', 'SUPPORT');
 
         $this->postJson('/api/players/me/sync-riot', [], $token);
         $this->assertResponseStatusCodeSame(404);
