@@ -15,4 +15,11 @@ RUN docker-php-ext-install \
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+COPY docker/php/php.dev.ini /usr/local/etc/php/conf.d/zz-dev.ini
+
+# var/ et vendor/ sont des volumes nommes. Docker les initialise a partir de
+# l image, en reprenant le proprietaire : ces dossiers doivent donc appartenir
+# a www-data ici, sinon php-fpm ne peut pas y ecrire ses proxys Doctrine.
+RUN mkdir -p /var/www/html/var /var/www/html/vendor     && chown -R www-data:www-data /var/www/html/var /var/www/html/vendor
+
 WORKDIR /var/www/html
