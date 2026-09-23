@@ -104,7 +104,7 @@ abstract class ApiTestCase extends WebTestCase
      * L'email final est : prefixe + suffixe random + @test.local
      * Le prefixe est utile pour identifier le test dans les logs.
      */
-    protected function registerAndLogin(string $emailPrefix, string $role = 'ROLE_PLAYER', string $password = 'password'): string
+    protected function registerAndLogin(string $emailPrefix, string $role = 'ROLE_PLAYER', string $password = 'test-password-2026'): string
     {
         $email = $this->uniqueEmail($emailPrefix);
 

@@ -6,12 +6,14 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Enum\UserRole;
+use App\Service\AccountAnonymizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api')]
 class AuthController extends AbstractController
@@ -20,7 +22,8 @@ class AuthController extends AbstractController
     public function register(
         Request $request,
         UserPasswordHasherInterface $hasher,
-        EntityManagerInterface $em
+        EntityManagerInterface $em,
+        ValidatorInterface $validator
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
@@ -32,7 +35,10 @@ class AuthController extends AbstractController
         $password = $data['password'] ?? null;
         $roleValue = $data['role'] ?? null;
 
-        if (!$email || !$password || !$roleValue) {
+        if (!is_string($email) || $email === ''
+            || !is_string($password) || $password === ''
+            || !is_string($roleValue) || $roleValue === ''
+        ) {
             return $this->json(
                 ['error' => 'Missing fields: email, password and role are required'],
                 400
@@ -58,7 +64,15 @@ class AuthController extends AbstractController
         $user = new User();
         $user->setEmail($email);
         $user->setRole($role);
+        $user->setPlainPassword($password);
+
+        $errors = $validator->validate($user);
+        if (count($errors) > 0) {
+            return $this->json(['errors' => $this->formatErrors($errors)], 422);
+        }
+
         $user->setPassword($hasher->hashPassword($user, $password));
+        $user->eraseCredentials();
 
         $em->persist($user);
         $em->flush();
@@ -86,5 +100,33 @@ class AuthController extends AbstractController
             'isActive' => $user->isActive(),
             'createdAt' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
         ]);
+    }
+
+    #[Route('/me', name: 'api_delete_me', methods: ['DELETE'])]
+    public function deleteMe(AccountAnonymizer $anonymizer): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $anonymizer->anonymize($user);
+
+        return $this->json(null, 204);
+    }
+
+    /**
+     * @param iterable<\Symfony\Component\Validator\ConstraintViolationInterface> $errors
+     * @return array<array{field: string, message: string}>
+     */
+    private function formatErrors(iterable $errors): array
+    {
+        $result = [];
+        foreach ($errors as $error) {
+            $result[] = [
+                'field' => $error->getPropertyPath(),
+                'message' => $error->getMessage(),
+            ];
+        }
+
+        return $result;
     }
 }

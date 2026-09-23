@@ -21,7 +21,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * Données de démo pour LoL Scout.
- * Mot de passe commun à tous les comptes : "password"
+ * Mot de passe commun à tous les comptes : "LolScout2026!"
  *
  * Chargement : docker compose exec php php bin/console doctrine:fixtures:load
  */
@@ -176,7 +176,7 @@ class AppFixtures extends Fixture
         $user = new User();
         $user->setEmail($email)
             ->setRole($role);
-        $user->setPassword($this->hasher->hashPassword($user, 'password'));
+        $user->setPassword($this->hasher->hashPassword($user, 'LolScout2026!'));
 
         return $user;
     }

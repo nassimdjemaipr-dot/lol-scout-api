@@ -75,7 +75,7 @@ Une fois l'API démarrée, ouvre **http://localhost:8000/api/doc** dans ton navi
 
 ## 👤 Comptes de démonstration
 
-> Mot de passe commun à tous les comptes : **`password`**
+> Mot de passe commun à tous les comptes : **`LolScout2026!`**
 
 | Rôle | Email | Profil lié |
 |---|---|---|
