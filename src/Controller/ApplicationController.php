@@ -85,7 +85,7 @@ class ApplicationController extends AbstractController
         $this->em->persist($application);
         $this->em->flush();
 
-        return $this->json($application, 201, [], ['groups' => ['application:read']]);
+        return $this->json($application, 201, [], ['groups' => ['application:read', 'player:read', 'offer:read']]);
     }
 
     /**
@@ -105,7 +105,7 @@ class ApplicationController extends AbstractController
 
         $applications = $this->applicationRepository->findByPlayer($player);
 
-        return $this->json($applications, 200, [], ['groups' => ['application:read']]);
+        return $this->json($applications, 200, [], ['groups' => ['application:read', 'player:read', 'offer:read']]);
     }
 
     /**
@@ -125,7 +125,7 @@ class ApplicationController extends AbstractController
 
         $applications = $this->applicationRepository->findByClub($club);
 
-        return $this->json($applications, 200, [], ['groups' => ['application:read']]);
+        return $this->json($applications, 200, [], ['groups' => ['application:read', 'player:read', 'offer:read']]);
     }
 
     /**
@@ -166,7 +166,7 @@ class ApplicationController extends AbstractController
         $application->setStatus($status);
         $this->em->flush();
 
-        return $this->json($application, 200, [], ['groups' => ['application:read']]);
+        return $this->json($application, 200, [], ['groups' => ['application:read', 'player:read', 'offer:read']]);
     }
 
     /**

@@ -178,6 +178,71 @@ class ApplicationControllerTest extends ApiTestCase
 
     // ─── Helpers ────────────────────────────────────────────────
 
+    // ─── Serialisation imbriquee ────────────────────────────────
+
+    public function testListForClubExposesPlayerAndOfferDetails(): void
+    {
+        [$tokenClub, $offerId] = $this->createApplicationOn('serial-club', 'serial-player', 'SerialPseudo');
+
+        $this->getJson('/api/clubs/me/applications', $tokenClub);
+        $this->assertResponseStatusCodeSame(200);
+
+        $application = $this->getJsonResponse()[0];
+
+        $this->assertSame('SerialPseudo', $application['player']['pseudo']);
+        $this->assertArrayHasKey('id', $application['player']);
+        $this->assertSame('MID', $application['player']['gameRole']);
+        $this->assertSame($offerId, $application['offer']['id']);
+        $this->assertArrayHasKey('title', $application['offer']);
+    }
+
+    public function testListForClubDoesNotExposePlayerAccount(): void
+    {
+        [$tokenClub] = $this->createApplicationOn('leak-club', 'leak-player', 'LeakPseudo');
+
+        $this->getJson('/api/clubs/me/applications', $tokenClub);
+
+        $player = $this->getJsonResponse()[0]['player'];
+        $this->assertArrayNotHasKey('user', $player);
+        $this->assertArrayNotHasKey('email', $player);
+        $this->assertArrayNotHasKey('password', $player);
+    }
+
+    public function testListMineExposesOfferDetails(): void
+    {
+        [, $offerId, $tokenPlayer] = $this->createApplicationOn('mine-club', 'mine-player', 'MinePseudo');
+
+        $this->getJson('/api/applications/me', $tokenPlayer);
+        $this->assertResponseStatusCodeSame(200);
+
+        $offer = $this->getJsonResponse()[0]['offer'];
+        $this->assertSame($offerId, $offer['id']);
+        $this->assertArrayHasKey('title', $offer);
+        $this->assertArrayHasKey('name', $offer['club']);
+    }
+
+    // ─── Helpers prives ─────────────────────────────────────────
+
+    /**
+     * Cree un club, son offre, un joueur et la candidature de celui-ci.
+     *
+     * @return array{0: string, 1: int, 2: string} jeton du club, id de l'offre, jeton du joueur
+     */
+    private function createApplicationOn(string $clubPrefix, string $playerPrefix, string $pseudo): array
+    {
+        $tokenClub = $this->createClub($clubPrefix);
+        $this->postJson('/api/offers', $this->validOfferPayload(), $tokenClub);
+        $offerId = $this->getJsonResponse()['id'];
+
+        $tokenPlayer = $this->registerAndLogin($playerPrefix, 'ROLE_PLAYER');
+        $this->postJson('/api/players', $this->validPlayerPayload($pseudo), $tokenPlayer);
+        $this->postJson('/api/applications', [
+            'offerId' => $offerId,
+            'message' => 'Candidature de test pour la serialisation imbriquee.',
+        ], $tokenPlayer);
+
+        return [$tokenClub, $offerId, $tokenPlayer];
+    }
     private function validOfferPayload(): array
     {
         return [
