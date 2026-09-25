@@ -37,7 +37,11 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 WORKDIR /var/www/html
 COPY --from=builder /var/www/html .
 
-RUN chown -R www-data:www-data var
+# var/ est exclu du depot : sur un clone propre il n'existe pas.
+# On le cree avant d'en changer le proprietaire, sinon le build echoue
+# en integration alors qu'il passe en local.
+RUN mkdir -p var/cache var/log \
+    && chown -R www-data:www-data var
 
 USER www-data
 
