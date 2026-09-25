@@ -1,0 +1,38 @@
+{
+	"id": "6ab4e46c3404041b5170e40c",
+	"name": "LoL Scout — Jeu d'essai : parcours de candidature",
+	"timestamp": "2026-09-24T08:50:57.192Z",
+	"collection_id": "436db65EdE5Cf9e3d4cE09DC",
+	"folder_id": 0,
+	"environment_id": "0",
+	"totalPass": 34,
+	"delay": 0,
+	"persist": true,
+	"status": "finished",
+	"startedAt": "2026-09-24T08:50:52.593Z",
+	"totalFail": 0,
+	"results": [],
+	"count": 1,
+	"totalTime": 0,
+	"collection": {
+		"requests": [
+			{ "id": "9E3e36ae5f807fc2b8c39a85" },
+			{ "id": "0edf17d0C14f0DCdB8B3c2cc" },
+			{ "id": "3FEBc26888B8Ab6d7254dAB6" },
+			{ "id": "EcDe6da90a73DC3B4Fbf4FaF" },
+			{ "id": "d1433Ff7ef3DEdD9CE4943BE" },
+			{ "id": "DC7895BD5A332a080C1Cb970" },
+			{ "id": "2109FABdfa0c3cCE3e7fCC8d" },
+			{ "id": "914FcED050Ed4F288af01d76" },
+			{ "id": "de8f33D19eEE6675aDCa0087" },
+			{ "id": "Cfb13c8313e4De062BBEb571" },
+			{ "id": "8bDEc8dBf78c0FbfFa6f3D5A" },
+			{ "id": "51ba2aB896fcD54AdAac8FDF" },
+			{ "id": "d5c7f241a9d35ccbeece33Ea" },
+			{ "id": "2259966C6777cA5c4Bea2d4C" },
+			{ "id": "cecA4AC86ac51d67eF7d56a7" },
+			{ "id": "4A7b5aF8F96FCCab0b840dFa" },
+			{ "id": "1fc4F09f17b2A92FF5c35eef" }
+		]
+	}
+}

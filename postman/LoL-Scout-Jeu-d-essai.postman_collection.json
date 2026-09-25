@@ -1,0 +1,489 @@
+{
+  "info": {
+    "name": "LoL Scout — Jeu d'essai : parcours de candidature",
+    "description": "Jeu d'essai du dossier projet CDA.\n\nFonctionnalité la plus représentative : la candidature d'un joueur à une offre. Elle traverse l'authentification par jeton, la validation des entrées, la contrainte d'unicité portée par la base, et le contrôle d'autorisation par propriété.\n\nLa collection s'exécute DANS L'ORDRE, du premier au dernier appel : chaque étape prépare la suivante. Utiliser le Collection Runner, pas les requêtes une par une.\n\nPrérequis : application démarrée (docker compose up -d) et jeu de données chargé (doctrine:fixtures:load).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api" },
+    { "key": "demoPassword", "value": "LolScout2026!" },
+    { "key": "clubEmail", "value": "club1@lolscout.gg" },
+    { "key": "otherClubEmail", "value": "club2@lolscout.gg" },
+    { "key": "newPlayerEmail", "value": "" },
+    { "key": "playerToken", "value": "" },
+    { "key": "clubToken", "value": "" },
+    { "key": "otherClubToken", "value": "" },
+    { "key": "clubId", "value": "" },
+    { "key": "offerId", "value": "" },
+    { "key": "applicationId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 — Préparation : connexion du club propriétaire",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('un jeton JWT est retourné', () => pm.expect(body.token).to.be.a('string').and.not.empty);",
+              "pm.collectionVariables.set('clubToken', body.token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{clubEmail}}\",\n  \"password\": \"{{demoPassword}}\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/login_check", "host": ["{{baseUrl}}"], "path": ["login_check"] },
+        "description": "Connexion du club qui publie l'offre. Son jeton servira aux étapes 10 et 12."
+      }
+    },
+    {
+      "name": "02 — Préparation : identifier une offre de ce club",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const me = pm.response.json();",
+              "pm.collectionVariables.set('clubId', me.id);",
+              "pm.test('le club a bien un profil', () => pm.expect(me.id).to.be.a('number'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{clubToken}}" }],
+        "url": { "raw": "{{baseUrl}}/clubs/me", "host": ["{{baseUrl}}"], "path": ["clubs", "me"] }
+      }
+    },
+    {
+      "name": "03 — Préparation : choisir une offre active de ce club",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const offers = pm.response.json();",
+              "const clubId = Number(pm.collectionVariables.get('clubId'));",
+              "const mine = offers.filter(o => o.club && o.club.id === clubId);",
+              "pm.test('ce club a au moins une offre active', () => pm.expect(mine.length).to.be.above(0));",
+              "if (mine.length) {",
+              "  pm.collectionVariables.set('offerId', mine[0].id);",
+              "  console.log('Offre ciblée : #' + mine[0].id + ' — ' + mine[0].title);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/offers", "host": ["{{baseUrl}}"], "path": ["offers"] },
+        "description": "Listing public : aucun jeton n'est envoyé, et la requête aboutit. C'est une décision de conception (§ 5.1), pas un oubli."
+      }
+    },
+    {
+      "name": "04 — Inscription d'un joueur (mot de passe trop court)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.collectionVariables.set('newPlayerEmail', 'jeu-essai-' + Date.now() + '@test.local');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('422 — la saisie est refusée', () => pm.response.to.have.status(422));",
+              "const body = pm.response.json();",
+              "const champs = body.errors.map(e => e.field);",
+              "pm.test('la longueur du mot de passe est en cause', () => pm.expect(champs).to.include('plainPassword'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{newPlayerEmail}}\",\n  \"password\": \"court\",\n  \"role\": \"ROLE_PLAYER\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/register", "host": ["{{baseUrl}}"], "path": ["register"] },
+        "description": "Le mot de passe doit faire douze caractères minimum. La contrainte porte sur la saisie et non sur l'empreinte bcrypt (§ 11.7.1)."
+      }
+    },
+    {
+      "name": "05 — Inscription d'un joueur (mot de passe valide)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('201 — le compte est créé', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.test('le rôle est bien ROLE_PLAYER', () => pm.expect(body.role).to.eql('ROLE_PLAYER'));",
+              "pm.test(\"l'empreinte du mot de passe n'est jamais retournée\", () => pm.expect(pm.response.text()).to.not.include('password'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{newPlayerEmail}}\",\n  \"password\": \"MotDePasseValide2026\",\n  \"role\": \"ROLE_PLAYER\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/register", "host": ["{{baseUrl}}"], "path": ["register"] }
+      }
+    },
+    {
+      "name": "06 — Connexion du joueur",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('un jeton JWT est retourné', () => pm.expect(body.token).to.be.a('string').and.not.empty);",
+              "pm.collectionVariables.set('playerToken', body.token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{newPlayerEmail}}\",\n  \"password\": \"MotDePasseValide2026\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/login_check", "host": ["{{baseUrl}}"], "path": ["login_check"] }
+      }
+    },
+    {
+      "name": "07 — Création du profil joueur",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('201 — le profil est créé', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.test('le poste est conservé', () => pm.expect(body.gameRole).to.eql('MID'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{playerToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pseudo\": \"JeuDEssai\",\n  \"firstName\": \"Jean\",\n  \"lastName\": \"Essai\",\n  \"gameRole\": \"MID\",\n  \"isAvailable\": true,\n  \"bio\": \"Profil créé pour le jeu d'essai du dossier projet.\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/players", "host": ["{{baseUrl}}"], "path": ["players"] },
+        "description": "Un compte ne suffit pas pour candidater : il faut un profil joueur. C'est ce que vérifie ApplicationController avant toute autre chose."
+      }
+    },
+    {
+      "name": "08 — Candidature sans authentification",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"401 — l'anonyme est refusé\", () => pm.response.to.have.status(401));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offerId\": {{offerId}},\n  \"message\": \"Candidature envoyée sans jeton, pour vérifier le pare-feu.\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/applications", "host": ["{{baseUrl}}"], "path": ["applications"] },
+        "description": "Aucun en-tête Authorization. La règle de clôture de security.yaml refuse par défaut tout ce qui n'est pas explicitement ouvert (§ 9.2)."
+      }
+    },
+    {
+      "name": "09 — Candidature avec un message trop court",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('422 — la saisie est refusée', () => pm.response.to.have.status(422));",
+              "const body = pm.response.json();",
+              "const champs = body.errors.map(e => e.field);",
+              "pm.test('le message est en cause', () => pm.expect(champs).to.include('message'));",
+              "console.log('Message renvoyé : ' + body.errors[0].message);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{playerToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offerId\": {{offerId}},\n  \"message\": \"salut\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/applications", "host": ["{{baseUrl}}"], "path": ["applications"] },
+        "description": "Le message doit faire de 10 à 2000 caractères. La contrainte est déclarée sur l'entité, donc active quel que soit le point d'entrée."
+      }
+    },
+    {
+      "name": "10 — Candidature valide",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('201 — la candidature est créée', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.test(\"le statut initial est EN_ATTENTE\", () => pm.expect(body.status).to.eql('EN_ATTENTE'));",
+              "pm.test('une date de candidature est posée', () => pm.expect(body.appliedAt).to.be.a('string'));",
+              "pm.collectionVariables.set('applicationId', body.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{playerToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offerId\": {{offerId}},\n  \"message\": \"Bonjour, je suis joueur MID et je cherche une équipe sérieuse pour la prochaine saison. Disponible en soirée pour les entraînements.\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/applications", "host": ["{{baseUrl}}"], "path": ["applications"] },
+        "description": "Le cas nominal. Le statut initial n'est pas fourni par le client : il est posé par le serveur."
+      }
+    },
+    {
+      "name": "11 — Candidature en double sur la même offre",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('409 — le doublon est refusé', () => pm.response.to.have.status(409));",
+              "const body = pm.response.json();",
+              "pm.test(\"le motif est explicite\", () => pm.expect(body.error).to.include('already applied'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{playerToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offerId\": {{offerId}},\n  \"message\": \"Seconde candidature à la même offre, pour vérifier la règle d'unicité.\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/applications", "host": ["{{baseUrl}}"], "path": ["applications"] },
+        "description": "Le contrôleur vérifie l'existence avant d'écrire, et la contrainte uniq_player_offer garantit la règle en base. Deux niveaux : le premier donne un message lisible, le second rend la règle infranchissable même par un autre chemin d'écriture."
+      }
+    },
+    {
+      "name": "12 — Le joueur consulte ses candidatures",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "const id = Number(pm.collectionVariables.get('applicationId'));",
+              "pm.test('la candidature créée est présente', () => pm.expect(body.map(a => a.id)).to.include(id));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{playerToken}}" }],
+        "url": { "raw": "{{baseUrl}}/applications/me", "host": ["{{baseUrl}}"], "path": ["applications", "me"] },
+        "description": "La convention /me désigne la ressource de l'utilisateur authentifié, dont l'identité est déduite du jeton et jamais d'un paramètre."
+      }
+    },
+    {
+      "name": "13 — Le club propriétaire reçoit la candidature",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "const id = Number(pm.collectionVariables.get('applicationId'));",
+              "pm.test('le club voit la candidature reçue', () => pm.expect(body.map(a => a.id)).to.include(id));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{clubToken}}" }],
+        "url": { "raw": "{{baseUrl}}/clubs/me/applications", "host": ["{{baseUrl}}"], "path": ["clubs", "me", "applications"] }
+      }
+    },
+    {
+      "name": "14 — Préparation : connexion d'un autre club",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('otherClubToken', pm.response.json().token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{otherClubEmail}}\",\n  \"password\": \"{{demoPassword}}\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/login_check", "host": ["{{baseUrl}}"], "path": ["login_check"] }
+      }
+    },
+    {
+      "name": "15 — Un autre club tente de traiter la candidature",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"403 — le club tiers est refusé\", () => pm.response.to.have.status(403));",
+              "const body = pm.response.json();",
+              "pm.test('le motif désigne la propriété', () => pm.expect(body.error).to.include('club owning the offer'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{otherClubToken}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"ACCEPTEE\"\n}" },
+        "url": {
+          "raw": "{{baseUrl}}/applications/{{applicationId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["applications", "{{applicationId}}"]
+        },
+        "description": "Ce club est authentifié et porte bien ROLE_CLUB. Le rôle ne suffit donc pas : le contrôle de propriété vérifie que l'offre lui appartient. Le rôle dit ce qu'on a le droit de faire, la propriété dit sur quoi (§ 11.6)."
+      }
+    },
+    {
+      "name": "16 — Le club propriétaire accepte la candidature",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('le statut passe à ACCEPTEE', () => pm.expect(body.status).to.eql('ACCEPTEE'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{clubToken}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"ACCEPTEE\"\n}" },
+        "url": {
+          "raw": "{{baseUrl}}/applications/{{applicationId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["applications", "{{applicationId}}"]
+        },
+        "description": "Boucle fermée : offre publiée, candidature déposée, décision rendue."
+      }
+    },
+    {
+      "name": "17 — Un statut inconnu est refusé",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('400 — le statut est refusé', () => pm.response.to.have.status(400));",
+              "const body = pm.response.json();",
+              "pm.test('les valeurs admises sont rappelées', () => pm.expect(body.allowed).to.include('ACCEPTEE'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{clubToken}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"PEUT_ETRE\"\n}" },
+        "url": {
+          "raw": "{{baseUrl}}/applications/{{applicationId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["applications", "{{applicationId}}"]
+        },
+        "description": "Le statut est contraint par une énumération PHP. Une valeur hors énumération ne franchit pas le contrôleur, et la réponse rappelle les valeurs admises."
+      }
+    }
+  ]
+}

@@ -59,6 +59,22 @@ class OfferController extends AbstractController
         return $this->json($offers, 200, [], ['groups' => ['offer:read']]);
     }
 
+    #[Route('/me', name: 'api_offer_list_mine', methods: ['GET'])]
+    public function listMine(): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $club = $this->clubRepository->findOneBy(['user' => $user]);
+        if ($club === null) {
+            return $this->json(['error' => 'You must have a club profile to list your offers'], 403);
+        }
+
+        $offers = $this->offerRepository->findBy(['club' => $club], ['publishedAt' => 'DESC']);
+
+        return $this->json($offers, 200, [], ['groups' => ['offer:read']]);
+    }
+
     #[Route('/{id}', name: 'api_offer_get', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function get(Offer $offer): JsonResponse
     {

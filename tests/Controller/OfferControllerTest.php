@@ -113,6 +113,56 @@ class OfferControllerTest extends ApiTestCase
         $this->assertSame('Updated Title Here', $this->getJsonResponse()['title']);
     }
 
+    // ─── Offres du club connecte ────────────────────────────────
+
+    public function testListMineWithoutTokenReturns401(): void
+    {
+        $this->getJson('/api/offers/me');
+        $this->assertResponseStatusCodeSame(401);
+    }
+
+    public function testListMineAsPlayerReturns403(): void
+    {
+        $token = $this->registerAndLogin('mine-player', 'ROLE_PLAYER');
+
+        $this->getJson('/api/offers/me', $token);
+        $this->assertResponseStatusCodeSame(403);
+    }
+
+    public function testListMineReturnsOnlyOwnOffers(): void
+    {
+        $tokenA = $this->createClub('mine-a');
+        $this->postJson('/api/offers', $this->validOfferPayload(), $tokenA);
+        $ownId = $this->getJsonResponse()['id'];
+
+        $tokenB = $this->createClub('mine-b');
+        $this->postJson('/api/offers', $this->validOfferPayload(), $tokenB);
+        $otherId = $this->getJsonResponse()['id'];
+
+        $this->getJson('/api/offers/me', $tokenA);
+
+        $this->assertResponseStatusCodeSame(200);
+        $ids = array_column($this->getJsonResponse(), 'id');
+        $this->assertContains($ownId, $ids);
+        $this->assertNotContains($otherId, $ids);
+    }
+
+    public function testListMineIncludesInactiveOffers(): void
+    {
+        $token = $this->createClub('mine-inactive');
+        $this->postJson('/api/offers', $this->validOfferPayload(), $token);
+        $offerId = $this->getJsonResponse()['id'];
+
+        $this->patchJson("/api/offers/{$offerId}", ['isActive' => false], $token);
+        $this->assertResponseStatusCodeSame(200);
+
+        $this->getJson('/api/offers/me', $token);
+        $this->assertContains($offerId, array_column($this->getJsonResponse(), 'id'));
+
+        $this->getJson('/api/offers');
+        $this->assertNotContains($offerId, array_column($this->getJsonResponse(), 'id'));
+    }
+
     // ─── Helpers prives ─────────────────────────────────────────
 
     private function validOfferPayload(): array

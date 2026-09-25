@@ -50,6 +50,7 @@ security:
         # car ^/api/players/me est un préfixe de ^/api/players)
         - { path: ^/api/players/me, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/clubs/me, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/offers/me, roles: IS_AUTHENTICATED_FULLY }
 
         # Listings publics en lecture seule (consultation sans connexion, cf. sitemap Jalon 2)
         - { path: ^/api/players, roles: PUBLIC_ACCESS, methods: [GET] }

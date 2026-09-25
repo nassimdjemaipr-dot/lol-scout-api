@@ -20,4 +20,18 @@
 
 ###> dossier projet ###
 # Livrables école : transmis via la plateforme de suivi, hors dépôt.
-/docs/dossier-projet/
+/docs/dossier-projet*/
+/docs/dossier-professionnel*/
+
+###> postman ###
+# Artefacts de l'espace de travail Postman, crees a l'ouverture du depot :
+# identifiants de compte et dossiers generes. Seule la collection exportee
+# et son README sont versionnes.
+/.postman/
+/postman/collections/
+/postman/documents/
+/postman/environments/
+/postman/flows/
+/postman/globals/
+/postman/mocks/
+/postman/specs/
