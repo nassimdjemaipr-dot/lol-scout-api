@@ -37,6 +37,12 @@ security:
         - { path: ^/api/login_check, roles: PUBLIC_ACCESS }
         - { path: ^/api/register, roles: PUBLIC_ACCESS }
 
+        # Espace d'administration : ROLE_ADMIN sur tout le prefixe.
+        # Declare tot, car la regle de cloture ^/api n'exige qu'une
+        # authentification : sans cette ligne, n'importe quel compte
+        # connecte atteindrait /api/admin.
+        - { path: ^/api/admin, roles: ROLE_ADMIN }
+
         # Documentation OpenAPI / Swagger UI (lecture publique)
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }
 
